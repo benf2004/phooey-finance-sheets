@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><style>
+    body {
+      font: 14px/1.45 system-ui;
+      color: #20252b;
+      padding: 8px;
+    }
+    button,
+    input,
+    select {
+      font: inherit;
+      padding: 7px;
+      width: 100%;
+      margin: 3px 0;
+      box-sizing: border-box;
+    }
+    button {
+      border: 1px solid #abc2b5;
+      background: #f5f8f5;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button.primary {
+      background: #28634a;
+      color: white;
+    }
+    details {
+      margin: 10px 0;
+    }
+    output {
+      display: block;
+      padding: 8px 0;
+      color: #28634a;
+      white-space: pre-wrap;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    label {
+      display: block;
+    }
+    fieldset {
+      margin: 8px 0;
+      border: 1px solid #ddd;
+    }
+  </style>
+  <details open>
+    <summary>Connect this workbook</summary>
+    <label>Workspace address<input id="origin" type="url" /></label
+    ><label>Pairing code<input id="code" /></label
+    ><button onclick="run('pairWorkbook', originInput.value, code.value)">
+      Pair workbook
+    </button>
+  </details>
+  <button class="primary" onclick="run('refreshFeed')">Refresh workbook</button
+  ><button onclick="run('stageRow', true)">New transaction</button
+  ><button onclick="run('stageRow', false)">Edit selected transaction</button
+  ><button onclick="run('saveDraft')">Save selected drafts</button>
+  <button onclick="review()">Review current ledger values</button
+  ><button onclick="run('linkSelected')">Link two selected transfer rows</button
+  ><output id="status" aria-live="polite"></output>
+  <section id="reviewPanel" hidden>
+    <pre id="summary"></pre>
+    <button
+      onclick="
+        if (
+          confirm('Replace these draft cells with the current ledger values?')
+        )
+          run('reloadDraft', record.id);
+      "
+    >
+      Use current ledger values
+    </button>
+    <button onclick="run('acceptRevision', record.id, record.revision)">
+      Keep draft against this revision
+    </button>
+    <details>
+      <summary>Split transaction</summary>
+      <div id="splits"></div>
+      <button onclick="splitLine()">Add split</button
+      ><button onclick="saveSplits()">Save splits</button>
+    </details>
+    <button onclick="run('unlinkReviewed', record.id, record.revision)">
+      Unlink transfer</button
+    ><button
+      onclick="
+        if (confirm('Delete the reviewed transaction from your ledger?'))
+          run('deleteReviewed', record.id, record.revision);
+      "
+    >
+      Delete transaction
+    </button>
+  </section>
+  <script>
+    const originInput = document.getElementById("origin"),
+      statusBox = document.getElementById("status");
+    let record;
+    function call(name, args, done) {
+      statusBox.textContent = "Working…";
+      google.script.run
+        .withFailureHandler((e) => (statusBox.textContent = e.message))
+        .withSuccessHandler(done)
+        [name](...args);
+    }
+    function run(name, ...args) {
+      call(name, args, (msg) => {
+        statusBox.textContent = msg;
+        reviewPanel.hidden = true;
+      });
+    }
+    function review() {
+      call("inspectRow", [], (r) => {
+        record = r;
+        reviewPanel.hidden = false;
+        summary.textContent =
+          "Current ledger values\n" +
+          [
+            r.posted,
+            r.account,
+            r.description,
+            (r.amount / 100).toFixed(2),
+            r.category,
+            r.merchant,
+            r.notes,
+            r.tags.join(", "),
+            "Ledger revision " +
+              r.revision +
+              " · sheet revision " +
+              r.draftRevision,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        splits.replaceChildren();
+        r.splits.forEach(splitLine);
+        statusBox.textContent = "Compare these values with your draft.";
+      });
+    }
+    function splitLine(s) {
+      s = s || {};
+      const f = document.createElement("fieldset");
+      f.innerHTML =
+        '<label>Amount<input type="number" step=".01"></label><label>Type<select><option>expense</option><option>income</option><option>transfer</option></select></label><label>Category<select><option value="">Uncategorized</option></select></label><label>Notes<input class="split-note"></label><button>Remove split</button>';
+      f.querySelector("input").value = s.amount == null ? "" : s.amount / 100;
+      const [t, c] = f.querySelectorAll("select");
+      t.value = s.type || "expense";
+      for (const o of record.categories) c.add(new Option(o.name, o.id));
+      c.value = s.category_id || "";
+      f.querySelector(".split-note").value = s.notes || "";
+      f.querySelector("button").onclick = () => f.remove();
+      splits.append(f);
+    }
+    function saveSplits() {
+      const rows = [...splits.children].map((f) => ({
+        amount: f.querySelector("input").value,
+        type: f.querySelectorAll("select")[0].value,
+        category: f.querySelectorAll("select")[1].value,
+        notes: f.querySelector(".split-note").value,
+      }));
+      run("updateSplits", record.id, record.revision, rows);
+    }
+  </script>
+</html>

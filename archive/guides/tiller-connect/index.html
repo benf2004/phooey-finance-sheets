@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Connect your Tiller workbook · phooey! finance</title>
+    <meta
+      name="description"
+      content="Feed a copy of your existing Tiller Google Sheet from phooey! finance, including Estimated Quarterly Tax, dashboards and balance history."
+    />
+    <link rel="icon" href="/business/assets/icon.svg" />
+    <link rel="stylesheet" href="/business/brand.css" />
+  </head>
+  <body>
+    <header>
+      <a href="/business/"
+        ><img src="/business/assets/wordmark.svg" alt="phooey! finance"
+      /></a>
+      <nav aria-label="Main navigation">
+        <a href="/business/sheets/">Google Sheets</a
+        ><a href="/business/pricing/">Pricing</a>
+      </nav>
+    </header>
+    <main>
+      <section class="intro">
+        <h1>Keep your Tiller workbook.</h1>
+        <p>
+          Bring new transactions and balances into the Google Sheet you already
+          use. Estimated Quarterly Tax, Business Dashboard and Spending Trends
+          can keep reading the same tabs.
+        </p>
+        <a class="button" href="phooey-tiller-connector.zip" download
+          >Download the Sheets connector</a
+        >
+      </section>
+      <section class="band">
+        <h2>Connect a copy</h2>
+        <ol>
+          <li>
+            Open your original workbook in Google Sheets and choose
+            <strong>File → Make a copy</strong>. Start from the native Google
+            Sheet so its formulas and charts carry over. Use a copy without an
+            active Tiller fill. Choose a first sync date after the last Tiller
+            transaction and balance for the accounts you plan to map.
+          </li>
+          <li>
+            In your Phooey dashboard, open
+            <strong
+              >Settings → Connections → AI &amp; MCP access → Create access
+              token</strong
+            >. Name it “Tiller workbook” and select only
+            <code>finance:read</code>. Copy the token.
+          </li>
+          <li>
+            Unzip the download. Create a
+            <a href="https://script.google.com/home/projects/create"
+              >private standalone Apps Script project</a
+            >
+            under your Google account. Paste <strong>Code.gs</strong> into the
+            editor. In Project Settings, turn on
+            <strong>Show appsscript.json manifest file in editor</strong>.
+            Replace the manifest with the downloaded
+            <strong>appsscript.json</strong> and save. The manifest enables the
+            Google Sheets advanced service. If you use a custom Google Cloud
+            project, enable the Google Sheets API in that project too.
+          </li>
+          <li>
+            Under <strong>Project Settings → Script properties</strong>, enter
+            the four values below. Keep the script private because its editors
+            can access the token.
+          </li>
+        </ol>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>What to enter</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>WORKBOOK_URL</code></td>
+              <td>The full Google Sheets URL of your copy</td>
+            </tr>
+            <tr>
+              <td><code>PHOOEY_ORIGIN</code></td>
+              <td>
+                The HTTPS address of your signed-in ledger, through the domain,
+                without a trailing slash
+              </td>
+            </tr>
+            <tr>
+              <td><code>READ_TOKEN</code></td>
+              <td>The read-only Phooey token you just created</td>
+            </tr>
+            <tr>
+              <td><code>FIRST_SYNC_DATE</code></td>
+              <td>The first day Phooey should supply, in YYYY-MM-DD format</td>
+            </tr>
+          </tbody>
+        </table>
+        <ol start="5">
+          <li>
+            Choose <strong>prepareWorkbook</strong> in the Apps Script editor
+            and click <strong>Run</strong>. Approve Google's access prompt for
+            your private project. In your workbook, open
+            <strong>Phooey Account Map</strong>. For each USD account, paste its
+            existing <strong>Account ID</strong> from Balance History, enter
+            <strong>NEW</strong> for a new account, or leave it blank to skip
+            it. Balance History may be under View → Hidden sheets.
+          </li>
+          <li>
+            Run <strong>previewSync</strong> and check the counts in the
+            execution log. Then run <strong>syncWorkbook</strong>. Check
+            Transactions, Balances and your quarterly report. Run
+            <strong>enableDailySync</strong> when you want automatic refreshes.
+            To stop, run <strong>disableDailySync</strong> and revoke the token
+            in Phooey. Replace expired tokens in the script properties.
+          </li>
+        </ol>
+      </section>
+      <section class="band">
+        <h2>How the reports get their numbers</h2>
+        <p>
+          Posted purchases, deposits and split allocations go into Transactions.
+          Balance observations go into Balance History under the mapped account
+          IDs. Existing categories keep the group, type and tags you chose in
+          Sheets. The connector adds any missing categories and a Tags column
+          when needed.
+        </p>
+        <p>
+          <strong>Estimated Quarterly Tax</strong> uses the workbook’s tax year,
+          filing settings and category tags. On Categories, check that each
+          applicable Income or Expense category has the
+          <strong>Business</strong> tag. Use separate categories for business
+          and personal portions. Open the report to review its tax rates and
+          payment dates for the year.
+        </p>
+        <p>
+          Transaction Tracker, Business Dashboard, Spending Trends, Accounts,
+          Balances and other formula-based tabs continue to use those feed
+          tables. Archived tax sheets keep their formulas and year settings. On
+          uncategorized transactions, the connector recognizes AutoCat’s
+          description, account and institution contains rules and amount
+          minimums and maximums. Other rules that depend on Tiller’s add-on
+          still require that add-on.
+        </p>
+        <p>
+          Sync runs from Phooey to Sheets. Edit posted amounts and splits in
+          Phooey. The connector supports up to 5,000 allocations and 5,000
+          balance observations per feed. Older Phooey installations supply
+          current balances at each refresh. If you are starting from scratch,
+          you can also use the
+          <a href="/business/template/">free Phooey workbook</a>.
+        </p>
+        <p>
+          <a
+            href="https://community.tiller.com/t/docs-estimated-quarterly-tax-sheet/118"
+            >Tiller’s quarterly tax guide</a
+          >
+          ·
+          <a
+            href="https://help.tiller.com/en/articles/821562-understanding-the-balance-history-sheet"
+            >Balance History reference</a
+          >
+        </p>
+      </section>
+      <section class="band">
+        <h2>When a new account is missing from Balances</h2>
+        <p>
+          On the Accounts tab, inspect F1 if it contains the “Unique Account
+          Identifier” array formula. A #REF! error naming F2 or another cell
+          below it means a value is blocking the formula. In your working copy,
+          save the named cells’ contents elsewhere, then clear just those
+          blocking cells. Leave F1 in place. The account names and balances
+          should populate automatically.
+        </p>
+      </section>
+      <section class="band"><h2>Add a business report</h2><p>The connector download includes Foundation.gs. Add that file to your private script project and run <strong>addBusinessDashboard</strong> or <strong>addQuarterlyEarnings</strong>. Each report reads your existing categories and transactions. An existing report with that name stays in place.</p><a href="/business/template/">Explore the Foundation workbook</a></section>
+    </main>
+    <footer>
+      <a href="/business/">phooey! finance</a
+      ><a href="/business/privacy/">Privacy</a
+      ><a href="/cloud/contact">Support</a
+      ><a href="/source.tar.gz">AGPL source</a>
+    </footer>
+  </body>
+</html>
